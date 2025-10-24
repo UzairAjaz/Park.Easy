@@ -1,5 +1,5 @@
 import { React , useState} from "react";
-import LoginSample from "./Loginsample";
+import LoginSample from "./LoginSample";
 import { Link } from "react-router-dom";
 
 export default function SignUp() {
