@@ -1,7 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { Amplify } from "aws-amplify";
 
 import App from "./App.jsx";
 import Login from "./Pages/Auth/Login";
@@ -11,9 +10,7 @@ import OperatorRegister from "./Pages/Auth/OperatorRegister";
 import roleRoutes from "./Routes/RoleRoutes";
 
 import "./index.css";
-import awsconfig from "./aws-exports";
-
-Amplify.configure(awsconfig);
+import "./aws-config"; // Import your Amplify config here
 
 const router = createBrowserRouter([
   {
