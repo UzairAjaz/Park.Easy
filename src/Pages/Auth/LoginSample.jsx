@@ -1,9 +1,10 @@
 import React from "react";
+import mainbg from "@/assets/mainbg.jpg";
 import logo from "@/assets/logo.png"
 export default function LoginSample() {
   return (
     <>
-      <div className="w-[58.5%] min-h-screen bg-[url(@/assets/mainbg.jpg)] bg-right-top ">
+      <div className="w-[58.5%] min-h-screen bg-right-top " style={{ backgroundImage: `url(${mainbg})` }}>
         <div className="w-[50px] h-[50px] ml-6 absolute z-10 top-8">
           <a href="/">
             <img src={logo} alt="logo" />
