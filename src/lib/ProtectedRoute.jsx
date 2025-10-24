@@ -2,14 +2,14 @@ import React from "react";
 import { Navigate } from "react-router-dom";
 
 const ProtectedRoute = ({ allowedRoles, children }) => {
-  const userRole = localStorage.getItem("role"); // stored after login
+  const userRole = localStorage.getItem("role"); 
 
-  // 🚫 Not logged in
+  // Not logged in
   if (!userRole) {
     return <Navigate to="/login" replace />;
   }
 
-  // 🚫 Logged in but not allowed to access this route
+  // Logged in but not allowed to access this route
   if (!allowedRoles.includes(userRole)) {
     // Redirect them to their own dashboard instead of showing error
     switch (userRole) {
@@ -22,7 +22,6 @@ const ProtectedRoute = ({ allowedRoles, children }) => {
     }
   }
 
-  // ✅ Authorized user
   return children;
 };
 

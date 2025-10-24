@@ -3,7 +3,6 @@ import { useState } from "react";
 import LoginSample from "./LoginSample";
 import { Link } from "react-router-dom";
 import { signUp, confirmSignUp } from "aws-amplify/auth";
-import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { signIn, signOut, fetchAuthSession } from "aws-amplify/auth";
 
@@ -20,33 +19,9 @@ export default function DriverRegister() {
   const [email, setEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
 
-  // const onSubmit = async (data) => {
-  //   setLoading(true);
-  //   try {
-  //     await signUp({
-  //       username: data.email,
-  //       password: data.password,
-  //       options: {
-  //         userAttributes: {
-  //           email: data.email,
-  //           given_name: data.firstName,
-  //           family_name: data.lastName,
-  //           phone_number: data.phone,
-  //           "custom:role": "driver",
-  //         },
-  //       },
-  //     });
-  //     setEmail(data.email);
-  //     setStep("confirm");
-  //     alert("Verification code sent to your email!");
-  //   } catch (err) {
-  //     console.error("Signup error:", err);
-  //   }
-  // };
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      // Only send allowed attribute (email)
       await signUp({
         username: data.email,
         password: data.password,
