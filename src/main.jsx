@@ -8,7 +8,7 @@ import SignUp from "./Pages/Auth/SignUp";
 import DriverRegister from "./Pages/Auth/DriverRegister";
 import OperatorRegister from "./Pages/Auth/OperatorRegister";
 import roleRoutes from "./Routes/RoleRoutes";
-
+import Navigate from "react"
 import "./index.css";
 import "./aws-config"; // Import your Amplify config here
 
