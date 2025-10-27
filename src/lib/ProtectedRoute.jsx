@@ -1,17 +1,23 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 
 const ProtectedRoute = ({ allowedRoles, children }) => {
-  const userRole = localStorage.getItem("role"); 
+  const [userRole, setUserRole] = useState(null);
+  const [checked, setChecked] = useState(false);
 
-  // Not logged in
+  useEffect(() => {
+    const role = localStorage.getItem("role");
+    setUserRole(role);
+    setChecked(true);
+  }, []);
+
+  if (!checked) return null; 
+
   if (!userRole) {
     return <Navigate to="/login" replace />;
   }
 
-  // Logged in but not allowed to access this route
   if (!allowedRoles.includes(userRole)) {
-    // Redirect them to their own dashboard instead of showing error
     switch (userRole) {
       case "driver":
         return <Navigate to="/driver/dashboard" replace />;

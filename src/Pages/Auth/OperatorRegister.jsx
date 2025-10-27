@@ -46,7 +46,7 @@ export default function OperatorRegister() {
     }
   };
 
-  // ✅ Handle verification
+  // Handle verification
 const handleConfirm = async (e) => {
   e.preventDefault();
   setLoading(true);

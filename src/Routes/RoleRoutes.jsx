@@ -1,6 +1,7 @@
 import ProtectedRoute from "../lib/ProtectedRoute";
 import DriverDashboard from "../Pages/Dashboard/DriverDashboard";
 import OperatorDashboard from "../Pages/Dashboard/OperatorDashboard";
+import ForgotPassword from "../Pages/Auth/ForgotPassword";
 
 const roleRoutes = [
   {
@@ -18,6 +19,10 @@ const roleRoutes = [
         <OperatorDashboard />
       </ProtectedRoute>
     ),
+  },
+  {
+    path: "forgot-password",
+    element: <ForgotPassword />
   },
 ];
 

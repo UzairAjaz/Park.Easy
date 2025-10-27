@@ -32,7 +32,7 @@ export default function DriverRegister() {
         },
       });
 
-      // Save other data (like role) locally or to your backend
+      // Save other data locally or to your backend
       localStorage.setItem("tempRole", "driver");
       localStorage.setItem("tempUserData", JSON.stringify(data));
 

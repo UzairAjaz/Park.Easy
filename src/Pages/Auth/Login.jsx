@@ -15,11 +15,10 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-
   const onsubmit = async (data) => {
     setLoading(true);
     try {
-      await signOut({ global: true }).catch(() => {}); 
+      await signOut({ global: true }).catch(() => {});
 
       await signIn({
         username: data.email,
@@ -85,7 +84,10 @@ function Login() {
             {/* Password */}
             <div className="flex justify-between items-center">
               <label className="text-sm text-[#5e5873]">Password</label>
-              <small className="text-blue-500 cursor-pointer hover:underline">
+              <small
+                onClick={() => navigate("/forgot-password")}
+                className="text-blue-500 cursor-pointer hover:underline"
+              >
                 Forgot Password?
               </small>
             </div>
