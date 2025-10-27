@@ -17,6 +17,7 @@ const router = createBrowserRouter([
     path: "/",
     element: <App />,
     children: [
+      { path: "/", element: <Navigate to="/login" replace /> },
       { path: "login", element: <Login /> },
       { path: "register", element: <SignUp /> },
       { path: "register-driver", element: <DriverRegister /> },
