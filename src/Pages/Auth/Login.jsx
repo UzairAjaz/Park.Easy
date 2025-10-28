@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import LoginSample from "./LoginSample";
 import { signIn, signOut, fetchAuthSession } from "aws-amplify/auth";
+import { toast } from "react-toastify";
 
 function Login() {
   const {
@@ -31,7 +32,7 @@ function Login() {
       const role = roleFromToken || tempRole;
 
       if (!role) {
-        alert("No role found. Please contact support.");
+        toast.error("No role found. Please contact support.");
         return;
       }
 
@@ -44,9 +45,9 @@ function Login() {
     } catch (err) {
       console.error("Login error:", err);
       if (err.name === "UserNotConfirmedException") {
-        alert("Please verify your email before logging in.");
+        toast.error("Please verify your email before logging in.");
       } else {
-        alert("Invalid credentials. Please try again.");
+        toast.error("Invalid credentials. Please try again.");
       }
     } finally {
       setLoading(false);

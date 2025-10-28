@@ -4,6 +4,7 @@ import LoginSample from "./LoginSample";
 import { signUp, confirmSignUp } from "aws-amplify/auth";
 import { useForm } from "react-hook-form";
 import { signIn, signOut, fetchAuthSession } from "aws-amplify/auth";
+import { toast } from "react-toastify";
 
 export default function OperatorRegister() {
   const {
@@ -37,64 +38,63 @@ export default function OperatorRegister() {
 
       setEmail(data.email);
       setStep("confirm");
-      alert("Verification code sent to your email!");
+      toast.success("Verification code sent to your email!");
     } catch (error) {
       console.error("Signup error:", error);
-      alert("Signup failed. Please check console for details.");
+      toast.error("Signup failed. Please check console for details.");
     } finally {
       setLoading(false);
     }
   };
 
   // Handle verification
-const handleConfirm = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+  const handleConfirm = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-  try {
-    // Step 1: Confirm email
-    await confirmSignUp({
-      username: email,
-      confirmationCode: verificationCode,
-    });
+    try {
+      // Step 1: Confirm email
+      await confirmSignUp({
+        username: email,
+        confirmationCode: verificationCode,
+      });
 
-    // Step 2: Sign out temporary session
-    await signOut({ global: true });
+      // Step 2: Sign out temporary session
+      await signOut({ global: true });
 
-    // Step 3: Sign in automatically
-    await signIn({
-      username: email,
-      password: watch("password"), // password from form
-    });
+      // Step 3: Sign in automatically
+      await signIn({
+        username: email,
+        password: watch("password"), // password from form
+      });
 
-    // Step 4: Fetch role (use fallback if missing)
-    const session = await fetchAuthSession();
-    const roleFromToken = session.tokens?.idToken?.payload?.["custom:role"];
-    const role = roleFromToken || localStorage.getItem("tempRole");
+      // Step 4: Fetch role (use fallback if missing)
+      const session = await fetchAuthSession();
+      const roleFromToken = session.tokens?.idToken?.payload?.["custom:role"];
+      const role = roleFromToken || localStorage.getItem("tempRole");
 
-    if (!role) {
-      alert("No role found. Please contact support.");
-      return;
+      if (!role) {
+        toast.error("No role found. Please contact support.");
+        return;
+      }
+
+      // Step 5: Store role and redirect
+      localStorage.setItem("role", role);
+
+      if (role === "driver") {
+        window.location.href = "/driver/dashboard";
+      } else if (role === "operator") {
+        window.location.href = "/operator/dashboard";
+      } else {
+        window.location.href = "/";
+      }
+    } catch (err) {
+      console.error("Confirmation/Login error:", err);
+      toast.error("Verification failed or login error. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    // Step 5: Store role and redirect
-    localStorage.setItem("role", role);
-
-    if (role === "driver") {
-      window.location.href = "/driver/dashboard";
-    } else if (role === "operator") {
-      window.location.href = "/operator/dashboard";
-    } else {
-      window.location.href = "/";
-    }
-  } catch (err) {
-    console.error("Confirmation/Login error:", err);
-    alert("Verification failed or login error. Please try again.");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
     <>

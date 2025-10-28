@@ -1,47 +1,68 @@
-import React from "react";
-import { useState } from "react";
-import LoginSample from "./LoginSample";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { signUp, confirmSignUp } from "aws-amplify/auth";
 import { useForm } from "react-hook-form";
-import { signIn, signOut, fetchAuthSession } from "aws-amplify/auth";
+import {
+  signUp,
+  confirmSignUp,
+  resendSignUpCode,
+  signIn,
+  signOut,
+  fetchAuthSession,
+} from "aws-amplify/auth";
+import { toast } from "react-toastify";
+import LoginSample from "./LoginSample";
 
 export default function DriverRegister() {
   const {
     register,
-    watch,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm();
-  const [activeCategory, setActiveCategory] = useState("driver");
+
   const [step, setStep] = useState("signup");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
+  const [activeCategory, setActiveCategory] = useState("driver");
 
   const onSubmit = async (data) => {
     setLoading(true);
     try {
+      setEmail(data.email);
+
       await signUp({
         username: data.email,
         password: data.password,
         options: {
           userAttributes: {
             email: data.email,
+            phone_number: data.phone,
           },
         },
       });
 
-      // Save other data locally or to your backend
+      // store temp info
+      localStorage.setItem("tempUserEmail", data.email);
+      localStorage.setItem("tempUserPassword", data.password);
       localStorage.setItem("tempRole", "driver");
-      localStorage.setItem("tempUserData", JSON.stringify(data));
 
-      setEmail(data.email);
+      toast.success("Verification code sent to your email!");
       setStep("confirm");
-      alert("Verification code sent to your email!");
     } catch (err) {
-      console.error("Signup error:", err);
-      alert("Signup failed. Try again with different credentials.");
+      // If user already exists but is not confirmed → resend code
+      if (err.name === "UsernameExistsException") {
+        try {
+          await resendSignUpCode({ username: data.email });
+          toast.info("Account already exists. New verification code sent!");
+          setStep("confirm");
+        } catch{
+          toast.error("Failed to resend verification code.");
+        }
+      } else {
+        console.error("Signup error:", err);
+        toast.error(err.message || "Signup failed. Try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -51,35 +72,39 @@ export default function DriverRegister() {
     e.preventDefault();
     setLoading(true);
 
+    const emailToUse =
+      email || localStorage.getItem("tempUserEmail") || watch("email");
+    const passwordToUse =
+      watch("password") || localStorage.getItem("tempUserPassword");
+
+    if (!emailToUse) {
+      toast.error("Email not found. Please sign up again.");
+      setStep("signup");
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Step 1: Confirm email
+      // Confirm latest code
       await confirmSignUp({
-        username: email,
-        confirmationCode: verificationCode,
+        username: emailToUse,
+        confirmationCode: verificationCode.trim(),
       });
 
-      // Step 2: Sign out temporary session
+      toast.success("Verification successful!");
       await signOut({ global: true });
 
-      // Step 3: Sign in automatically
-      await signIn({
-        username: email,
-        password: watch("password"), // password from form
-      });
-
-      // Step 4: Fetch role (use fallback if missing)
+      // Auto sign in
+      await signIn({ username: emailToUse, password: passwordToUse });
       const session = await fetchAuthSession();
-      const roleFromToken = session.tokens?.idToken?.payload?.["custom:role"];
-      const role = roleFromToken || localStorage.getItem("tempRole");
+      const role =
+        session.tokens?.idToken?.payload?.["custom:role"] ||
+        localStorage.getItem("tempRole");
 
-      if (!role) {
-        alert("No role found. Please contact support.");
-        return;
-      }
-
-      // Step 5: Store role and redirect
       localStorage.setItem("role", role);
+      toast.success("Login successful!");
 
+      // Redirect based on role
       if (role === "driver") {
         window.location.href = "/driver/dashboard";
       } else if (role === "operator") {
@@ -89,9 +114,24 @@ export default function DriverRegister() {
       }
     } catch (err) {
       console.error("Confirmation/Login error:", err);
-      alert("Verification failed or login error. Please try again.");
+      toast.error(err.message || "Verification failed. Try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (!email) {
+      toast.error("Please sign up first to get a verification code.");
+      return;
+    }
+
+    try {
+      await resendSignUpCode({ username: email });
+      toast.info("New verification code sent to your email!");
+    } catch (err) {
+      console.error("Resend code error:", err);
+      toast.error("Failed to resend verification code.");
     }
   };
 
@@ -100,7 +140,9 @@ export default function DriverRegister() {
       {step === "signup" ? (
         <section className="flex">
           <LoginSample />
+
           <div className="p-12 flex flex-col justify-center w-[41%]">
+            {/* Role Selection */}
             <div className="flex justify-center flex-wrap gap-4 mb-6 mt-10">
               <Link
                 to="/register-driver"
@@ -111,19 +153,19 @@ export default function DriverRegister() {
                     : "border-blue-300"
                 }`}
               >
-                {/* <i className="fa-solid fa-person text-4xl text-[#469bd5] mb-2"></i>
-                 <p className="font-medium text-[#469bd5]">Driver</p> */}
                 <div className="flex flex-col gap-4">
                   <i
-                    className={`fa-solid fa-person text-5xl text-[#469bd5] ${
+                    className={`fa-solid fa-person text-5xl ${
                       activeCategory === "driver"
                         ? "text-white"
-                        : "border-gray-300"
+                        : "text-[#469bd5]"
                     }`}
                   ></i>
                   <p
-                    className={`font-medium text-[#469bd5] text-sm ${
-                      activeCategory === "driver" ? "text-white" : ""
+                    className={`font-medium text-sm ${
+                      activeCategory === "driver"
+                        ? "text-white"
+                        : "text-[#469bd5]"
                     }`}
                   >
                     Driver
@@ -134,7 +176,7 @@ export default function DriverRegister() {
               <Link
                 to="/register-operator"
                 onClick={() => setActiveCategory("operator")}
-                className={`w-44 border rounded-lg p-4 text-center transition-all hover:shadow-[0_4px_25px_gray] shadow-sm  ${
+                className={`w-44 border rounded-lg p-6 text-center transition-all hover:shadow-[0_4px_25px_gray] shadow-sm ${
                   activeCategory === "operator"
                     ? "border-[#469bd5] bg-[#469bd5]"
                     : "border-gray-300"
@@ -142,15 +184,17 @@ export default function DriverRegister() {
               >
                 <div className="flex flex-col gap-4">
                   <i
-                    className={`fa-solid fa-building text-5xl text-[#469bd5] ${
+                    className={`fa-solid fa-building text-5xl ${
                       activeCategory === "operator"
                         ? "text-white"
-                        : "border-gray-300"
+                        : "text-[#469bd5]"
                     }`}
                   ></i>
                   <p
-                    className={`font-medium text-[#469bd5] text-sm ${
-                      activeCategory === "operator" ? "text-white" : ""
+                    className={`font-medium text-sm ${
+                      activeCategory === "operator"
+                        ? "text-white"
+                        : "text-[#469bd5]"
                     }`}
                   >
                     Parking Facility Operator
@@ -158,6 +202,8 @@ export default function DriverRegister() {
                 </div>
               </Link>
             </div>
+
+            {/* Signup Form */}
             <form
               onSubmit={handleSubmit(onSubmit)}
               className="mt-8 bg-white rounded-2xl"
@@ -170,8 +216,11 @@ export default function DriverRegister() {
                   </label>
                   <input
                     {...register("firstName", { required: true })}
-                    className={`w-full border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#469bd5] 
-        ${errors.firstName ? "border-red-500 bg-red-50" : "border-gray-300"}`}
+                    className={`w-full border rounded-md px-4 py-2 ${
+                      errors.firstName
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-300"
+                    }`}
                   />
                 </div>
 
@@ -182,8 +231,11 @@ export default function DriverRegister() {
                   </label>
                   <input
                     {...register("lastName", { required: true })}
-                    className={`w-full border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#469bd5] 
-        ${errors.lastName ? "border-red-500 bg-red-50" : "border-gray-300"}`}
+                    className={`w-full border rounded-md px-4 py-2 ${
+                      errors.lastName
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-300"
+                    }`}
                   />
                 </div>
 
@@ -198,8 +250,11 @@ export default function DriverRegister() {
                       pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
                     })}
                     type="email"
-                    className={`w-full border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#469bd5] 
-        ${errors.email ? "border-red-500 bg-red-50" : "border-gray-300"}`}
+                    className={`w-full border rounded-md px-4 py-2 ${
+                      errors.email
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-300"
+                    }`}
                   />
                 </div>
 
@@ -215,8 +270,11 @@ export default function DriverRegister() {
                     })}
                     type="tel"
                     placeholder="+1 (702) 123-4567"
-                    className={`w-full border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#469bd5] 
-        ${errors.phone ? "border-red-500 bg-red-50" : "border-gray-300"}`}
+                    className={`w-full border rounded-md px-4 py-2 ${
+                      errors.phone
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-300"
+                    }`}
                   />
                 </div>
 
@@ -226,14 +284,14 @@ export default function DriverRegister() {
                     Password *
                   </label>
                   <input
-                    {...register("password", {
-                      required: true,
-                      minLength: 8,
-                    })}
+                    {...register("password", { required: true, minLength: 8 })}
                     type="password"
                     placeholder="············"
-                    className={`w-full border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#469bd5] 
-        ${errors.password ? "border-red-500 bg-red-50" : "border-gray-300"}`}
+                    className={`w-full border rounded-md px-4 py-2 ${
+                      errors.password
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-300"
+                    }`}
                   />
                 </div>
 
@@ -249,12 +307,11 @@ export default function DriverRegister() {
                     })}
                     type="password"
                     placeholder="············"
-                    className={`w-full border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#469bd5] 
-        ${
-          errors.confirmPassword
-            ? "border-red-500 bg-red-50"
-            : "border-gray-300"
-        }`}
+                    className={`w-full border rounded-md px-4 py-2 ${
+                      errors.confirmPassword
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-300"
+                    }`}
                   />
                 </div>
               </div>
@@ -265,8 +322,6 @@ export default function DriverRegister() {
                   id="terms"
                   name="agree"
                   type="checkbox"
-                  // checked={formData.agree}
-                  // onChange={handleChange}
                   className="h-4 w-4 text-[#469bd5] border-gray-300 rounded focus:ring-[#469bd5]"
                 />
                 <label htmlFor="terms" className="ml-2 text-sm text-gray-600">
@@ -277,18 +332,19 @@ export default function DriverRegister() {
                 </label>
               </div>
 
-              {/* Submit Button */}
               <button
                 type="submit"
-                className="mt-6 w-full bg-[#469bd5] hover:bg-[#3b88c0] text-white py-2.5 rounded-md font-medium transition-all"
+                disabled={loading}
+                className="mt-6 w-full bg-[#469bd5] hover:bg-[#3b88c0] text-white py-2.5 rounded-md font-medium transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                Sign Up
+                {loading ? "Signing up..." : "Sign Up"}
               </button>
             </form>
           </div>
         </section>
       ) : (
-        <div className="max-w-md mx-auto">
+        // CONFIRMATION PAGE
+        <div className="max-w-md mx-auto mt-16 p-6 bg-white rounded-xl shadow">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
             Verify Your Email
           </h2>
@@ -297,33 +353,36 @@ export default function DriverRegister() {
           </p>
 
           <form onSubmit={handleConfirm}>
-            <div className="mb-4">
-              <label className="block text-sm font-bold text-gray-600 mb-1">
-                Verification Code *
-              </label>
-              <input
-                name="verificationCode"
-                type="text"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value)}
-                placeholder="Enter 6-digit code"
-                className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#469bd5]"
-                required
-              />
-            </div>
+            <input
+              name="verificationCode"
+              type="text"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value)}
+              placeholder="Enter 6-digit code"
+              className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#469bd5]"
+              required
+            />
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#469bd5] hover:bg-[#3b88c0] text-white py-2.5 rounded-md font-medium transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="mt-4 w-full bg-[#469bd5] hover:bg-[#3b88c0] text-white py-2.5 rounded-md font-medium transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {loading ? "Verifying..." : "Verify Email"}
             </button>
 
             <button
               type="button"
-              onClick={() => setStep("signup")}
+              onClick={handleResendCode}
               className="w-full mt-3 text-[#469bd5] hover:underline text-sm"
+            >
+              Resend Code
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStep("signup")}
+              className="w-full mt-2 text-gray-500 hover:underline text-sm"
             >
               Back to Sign Up
             </button>
